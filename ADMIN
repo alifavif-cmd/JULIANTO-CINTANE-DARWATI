@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>HT ADMIN PANEL</title>
+
+<script>
+window._pnSDKReady=false;
+function _onPNLoad(){window._pnSDKReady=true;if(window._pnSDKReadyCb)window._pnSDKReadyCb();}
+function _onPNError(){
+  var s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/pubnub@7.2.0/dist/web/pubnub.min.js';
+  s.onload=_onPNLoad;s.onerror=function(){alert('GAGAL LOAD SDK')};
+  document.head.appendChild(s);
+}
+</script>
+<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.0.min.js"
+        onload="_onPNLoad()" onerror="_onPNError()"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:#080808;min-height:100vh;font-family:'Courier New',monospace;color:#eee;}
+
+/* ═══ LOGIN ═══ */
+#loginScreen{position:fixed;inset:0;background:#030803;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:30px;}
+#loginScreen.hide{display:none;}
+.login-title{font-size:20px;color:#ff6b00;letter-spacing:4px;font-weight:bold;}
+.login-sub{font-size:9px;color:#222;letter-spacing:4px;}
+.login-box{width:100%;max-width:320px;background:#0a140a;border:2px solid #1a3010;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px;}
+.login-label{font-size:9px;color:#3a7800;letter-spacing:3px;}
+.login-input{background:#050f05;border:2px solid #1a3010;border-radius:8px;color:#ff6b00;font-family:'Courier New',monospace;font-size:16px;font-weight:bold;letter-spacing:4px;padding:12px 14px;width:100%;outline:none;text-transform:uppercase;}
+.login-input:focus{border-color:#3a7800;}
+.login-btn{width:100%;height:54px;background:linear-gradient(135deg,#1a3c00,#0a2000);border:2px solid #3a7800;border-radius:10px;color:#aed000;font-size:14px;font-weight:bold;font-family:'Courier New',monospace;letter-spacing:3px;cursor:pointer;}
+.login-btn:active{transform:scale(.97);}
+.login-err{font-size:10px;color:#dd2222;letter-spacing:2px;text-align:center;min-height:14px;}
+
+/* ═══ ADMIN PANEL ═══ */
+#adminPanel{display:none;flex-direction:column;min-height:100vh;}
+#adminPanel.show{display:flex;}
+
+.adm-hdr{background:#050f05;border-bottom:2px solid #1a3010;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.adm-hdr-title{font-size:14px;color:#ff6b00;letter-spacing:3px;font-weight:bold;}
+.adm-hdr-right{display:flex;align-items:center;gap:8px;}
+.adm-status{font-size:9px;letter-spacing:2px;padding:3px 8px;border-radius:4px;}
+.adm-status.on{background:#0a2000;color:#44cc44;border:1px solid #226600;}
+.adm-status.off{background:#200000;color:#cc4444;border:1px solid #661100;animation:blink .8s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.adm-logout{font-size:9px;color:#333;letter-spacing:1px;cursor:pointer;padding:4px 8px;border:1px solid #222;border-radius:4px;}
+.adm-logout:active{color:#dd2222;}
+
+.adm-body{flex:1;padding:14px;display:flex;flex-direction:column;gap:14px;max-width:480px;margin:0 auto;width:100%;}
+
+/* ═══ STATS BAR ═══ */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.stat-card{background:#050f05;border:1px solid #1a3010;border-radius:10px;padding:12px;text-align:center;}
+.stat-num{font-size:28px;font-weight:bold;color:#aed000;line-height:1;}
+.stat-lbl{font-size:8px;color:#2e5808;letter-spacing:2px;margin-top:4px;}
+
+/* ═══ BROADCAST ═══ */
+.section-title{font-size:10px;color:#3a7800;letter-spacing:3px;margin-bottom:8px;}
+.broadcast-box{background:#050f05;border:2px solid #1a3010;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.bc-input{background:#030803;border:1px solid #1a3010;border-radius:6px;color:#aed000;font-family:'Courier New',monospace;font-size:13px;padding:10px 12px;width:100%;outline:none;}
+.bc-input::placeholder{color:#1a3010;}
+.bc-input:focus{border-color:#3a7800;}
+.bc-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.bc-btn{height:44px;background:#0a1a00;border:2px solid #2a5200;border-radius:8px;color:#88cc44;font-size:11px;font-weight:bold;font-family:'Courier New',monospace;letter-spacing:2px;cursor:pointer;touch-action:manipulation;}
+.bc-btn:active{transform:scale(.96);}
+.bc-btn.warn{background:#1a0800;border-color:#663300;color:#cc8844;}
+
+/* ═══ CHANNEL MONITOR ═══ */
+.ch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.ch-card{background:#050f05;border:1px solid #0e1e0e;border-radius:8px;padding:8px;text-align:center;cursor:pointer;}
+.ch-card.active{border-color:#3a7800;background:#071401;}
+.ch-card.active .ch-num{color:#aed000;}
+.ch-num{font-size:22px;font-weight:bold;color:#1a3010;letter-spacing:2px;}
+.ch-count{font-size:8px;color:#1a3010;letter-spacing:1px;margin-top:2px;}
+.ch-card.active .ch-count{color:#44881a;}
+
+/* ═══ USER LIST ═══ */
+.user-list{display:flex;flex-direction:column;gap:8px;}
+.user-card{background:#050f05;border:1px solid #1a2010;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;}
+.user-card.banned-card{border-color:#330000;opacity:.5;}
+.user-avatar{width:38px;height:38px;border-radius:50%;background:#0a1a00;border:2px solid #1a3010;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.user-info{flex:1;min-width:0;}
+.user-name{font-size:13px;font-weight:bold;color:#aed000;letter-spacing:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-meta{font-size:9px;color:#2e5808;letter-spacing:1px;margin-top:2px;}
+.user-id{font-size:8px;color:#1a3010;letter-spacing:1px;}
+.user-actions{display:flex;flex-direction:column;gap:5px;flex-shrink:0;}
+.ua-btn{height:30px;border-radius:6px;font-size:9px;font-weight:bold;font-family:'Courier New',monospace;letter-spacing:1px;cursor:pointer;touch-action:manipulation;padding:0 10px;border:none;}
+.ua-btn:active{transform:scale(.94);}
+.ua-kick{background:#1a0800;border:1px solid #663300;color:#ff8844;}
+.ua-ban{background:#200000;border:1px solid #660000;color:#ff4444;}
+.ua-unban{background:#0a0020;border:1px solid #330066;color:#8844ff;}
+
+/* ═══ BAN LIST ═══ */
+.ban-card{background:#150505;border:1px solid #330000;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;}
+.ban-name{flex:1;font-size:12px;color:#cc4444;letter-spacing:2px;}
+.ban-meta{font-size:8px;color:#441111;letter-spacing:1px;}
+
+/* ═══ EMPTY STATE ═══ */
+.empty{text-align:center;color:#1a3010;font-size:10px;letter-spacing:2px;padding:24px;background:#050f05;border:1px solid #0e1e0e;border-radius:10px;}
+
+/* ═══ NOTIF TOAST ═══ */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#0a1a00;border:2px solid #3a7800;border-radius:10px;color:#aed000;font-size:11px;font-family:'Courier New',monospace;letter-spacing:2px;padding:10px 20px;z-index:999;transition:transform .3s;white-space:nowrap;}
+#toast.show{transform:translateX(-50%) translateY(0);}
+#toast.err{background:#1a0000;border-color:#660000;color:#ff4444;}
+
+/* ═══ CONFIRM DIALOG ═══ */
+#confirmDlg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:998;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;}
+#confirmDlg.show{display:flex;}
+.dlg-box{background:#0a0f0a;border:2px solid #1a3010;border-radius:14px;padding:20px;max-width:320px;width:100%;display:flex;flex-direction:column;gap:14px;}
+.dlg-title{font-size:13px;color:#ff6b00;letter-spacing:3px;font-weight:bold;text-align:center;}
+.dlg-msg{font-size:11px;color:#3a7800;letter-spacing:1px;text-align:center;line-height:1.8;}
+.dlg-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.dlg-btn{height:46px;border-radius:8px;font-size:12px;font-weight:bold;font-family:'Courier New',monospace;letter-spacing:2px;cursor:pointer;touch-action:manipulation;}
+.dlg-btn:active{transform:scale(.96);}
+.dlg-cancel{background:#0a0f0a;border:2px solid #1a3010;color:#3a7800;}
+.dlg-ok{background:#200000;border:2px solid #660000;color:#ff4444;}
+.dlg-ok.warn{background:#1a0800;border:2px solid #663300;color:#ff8844;}
+
+/* ═══ REASON INPUT ═══ */
+.dlg-reason{background:#030803;border:1px solid #1a3010;border-radius:6px;color:#aed000;font-family:'Courier New',monospace;font-size:12px;padding:10px;width:100%;outline:none;}
+.dlg-reason::placeholder{color:#1a3010;}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="loginScreen">
+  <div style="font-size:32px">🛡️</div>
+  <div class="login-title">ADMIN PANEL</div>
+  <div class="login-sub">HT JULIANTO · KONTROL PENUH</div>
+  <div class="login-box">
+    <div class="login-label">PASSWORD ADMIN</div>
+    <input class="login-input" id="pwInput" type="password" maxlength="32"
+      placeholder="············" autocomplete="off">
+    <div class="login-err" id="loginErr"></div>
+    <button class="login-btn" onclick="doLogin()">🔓 MASUK PANEL</button>
+  </div>
+</div>
+
+<!-- ═══ ADMIN PANEL ═══ -->
+<div id="adminPanel">
+  <div class="adm-hdr">
+    <div class="adm-hdr-title">🛡️ ADMIN</div>
+    <div class="adm-hdr-right">
+      <div class="adm-status off" id="pnStatus">OFFLINE</div>
+      <div class="adm-logout" onclick="doLogout()">KELUAR</div>
+    </div>
+  </div>
+
+  <div class="adm-body">
+
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num" id="statOnline">0</div>
+        <div class="stat-lbl">ONLINE</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="statActive">0</div>
+        <div class="stat-lbl">DI CHANNEL</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="statBanned">0</div>
+        <div class="stat-lbl">DIBLOKIR</div>
+      </div>
+    </div>
+
+    <!-- BROADCAST -->
+    <div>
+      <div class="section-title">📢 BROADCAST KE SEMUA</div>
+      <div class="broadcast-box">
+        <input class="bc-input" id="bcMsg" type="text" maxlength="80"
+          placeholder="Ketik pesan untuk semua pengguna..." autocomplete="off">
+        <div class="bc-btns">
+          <button class="bc-btn" onclick="doBroadcast('announce')">📣 UMUMKAN</button>
+          <button class="bc-btn warn" onclick="doBroadcastKickAll()">⚡ PUTUS SEMUA</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHANNEL MONITOR -->
+    <div>
+      <div class="section-title">📡 STATUS CHANNEL</div>
+      <div class="ch-grid" id="chGrid">
+        <!-- diisi JS -->
+      </div>
+    </div>
+
+    <!-- FILTER -->
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <div class="section-title" style="margin:0">👥 PENGGUNA ONLINE</div>
+      <div style="margin-left:auto;display:flex;gap:6px;">
+        <button onclick="filterUsers('all')" id="fAll" style="font-size:8px;padding:4px 10px;background:#071e00;border:1px solid #2a5200;border-radius:5px;color:#88cc44;font-family:'Courier New',monospace;cursor:pointer;">SEMUA</button>
+        <button onclick="filterUsers('channel')" id="fCh" style="font-size:8px;padding:4px 10px;background:#0a0a0a;border:1px solid #222;border-radius:5px;color:#444;font-family:'Courier New',monospace;cursor:pointer;">DI CH</button>
+      </div>
+    </div>
+
+    <!-- USER LIST -->
+    <div class="user-list" id="userList">
+      <div class="empty">Menunggu pengguna bergabung...</div>
+    </div>
+
+    <!-- BAN LIST -->
+    <div id="banSection">
+      <div class="section-title" style="margin-bottom:8px;">🚫 DAFTAR BLOKIR (<span id="banCount">0</span>)</div>
+      <div class="user-list" id="banList">
+        <div class="empty">Belum ada yang diblokir</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- CONFIRM DIALOG -->
+<div id="confirmDlg">
+  <div class="dlg-box">
+    <div class="dlg-title" id="dlgTitle">KONFIRMASI</div>
+    <div class="dlg-msg" id="dlgMsg">Yakin?</div>
+    <input class="dlg-reason" id="dlgReason" type="text" maxlength="60" placeholder="Alasan (opsional)..." autocomplete="off">
+    <div class="dlg-btns">
+      <button class="dlg-btn dlg-cancel" onclick="closeDlg()">BATAL</button>
+      <button class="dlg-btn dlg-ok" id="dlgOkBtn" onclick="confirmAction()">YA, LANJUT</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════
+// ▼ KONFIGURASI — HARUS SAMA DENGAN index.html
+// ══════════════════════════════════════
+const GID          = 'JULIANTO2024';
+const PP           = 'demo';
+const PS           = 'demo';
+const ADMIN_SECRET = 'JULIADMIN99';    // ← sama dengan index.html!
+const ADMIN_PASS   = 'JULIADMIN99';    // ← password login admin (bisa beda)
+// ══════════════════════════════════════
+
+const LOBBY_CH = 'ht_'+GID+'_lobby';
+const CMD_CH   = 'ht_'+GID+'_cmd_'+ADMIN_SECRET;
+const ME_ADMIN = 'ADMIN_' + (Math.random().toString(36).slice(2,7)).toUpperCase();
+
+const D = id => document.getElementById(id);
+
+let pn = null;
+let users = {};      // pid → {name, channel, mode, ts, lastSeen}
+let banList = [];    // [{name, pid, bannedAt}]
+let filterMode = 'all';
+let _pendingAction = null;
+let staleTimer = null;
+
+// ══════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════
+D('pwInput').addEventListener('keydown', e=>{if(e.key==='Enter')doLogin();});
+
+function doLogin(){
+  const val = D('pwInput').value.trim().toUpperCase();
+  if(val !== ADMIN_PASS.toUpperCase()){
+    D('loginErr').textContent = 'Password salah!';
+    D('pwInput').value='';
+    D('pwInput').focus();
+    return;
+  }
+  D('loginScreen').classList.add('hide');
+  D('adminPanel').classList.add('show');
+  // Muat ban list dari localStorage
+  loadBanList();
+  initPN();
+}
+
+function doLogout(){
+  location.reload();
+}
+
+// ══════════════════════════════════════
+// PUBNUB INIT
+// ══════════════════════════════════════
+function initPN(){
+  if(!window._pnSDKReady){
+    window._pnSDKReadyCb = initPN;
+    return;
+  }
+  try{pn=new PubNub({publishKey:PP,subscribeKey:PS,uuid:ME_ADMIN});}
+  catch(e){showToast('GAGAL INIT PUBNUB','err');return;}
+
+  pn.addListener({
+    message:({message})=>{
+      if(!message||!message.type)return;
+      handleLobbyMsg(message);
+    },
+    status:({category})=>{
+      if(category==='PNConnectedCategory'){
+        D('pnStatus').textContent='ONLINE';
+        D('pnStatus').className='adm-status on';
+        showToast('TERHUBUNG KE JARINGAN');
+      }
+      if(category==='PNNetworkDownCategory'){
+        D('pnStatus').textContent='OFFLINE';
+        D('pnStatus').className='adm-status off';
+      }
+      if(category==='PNReconnectedCategory'){
+        D('pnStatus').textContent='ONLINE';
+        D('pnStatus').className='adm-status on';
+      }
+    }
+  });
+
+  pn.subscribe({channels:[LOBBY_CH,CMD_CH]});
+
+  // Hapus user yang sudah stale (tidak heartbeat > 60 detik)
+  staleTimer = setInterval(removeStaleUsers, 15000);
+}
+
+// ══════════════════════════════════════
+// LOBBY MESSAGE HANDLER
+// ══════════════════════════════════════
+function handleLobbyMsg(m){
+  if(!m.from)return;
+  const pid = m.from;
+  const ts  = Date.now();
+
+  if(m.type==='heartbeat'||m.type==='join'){
+    users[pid] = {
+      name:     m.name || pid,
+      channel:  m.channel || 0,
+      mode:     m.mode || 'normal',
+      ts:       m.ts || ts,
+      lastSeen: ts,
+    };
+    updateUI();
+  }
+  if(m.type==='bye'){
+    if(users[pid]) delete users[pid];
+    updateUI();
+  }
+}
+
+function removeStaleUsers(){
+  const now = Date.now();
+  const STALE_MS = 70000; // 70 detik (heartbeat 25s + buffer)
+  let changed = false;
+  Object.keys(users).forEach(pid=>{
+    if(now - users[pid].lastSeen > STALE_MS){
+      delete users[pid];
+      changed=true;
+    }
+  });
+  if(changed)updateUI();
+}
+
+// ══════════════════════════════════════
+// BAN LIST (localStorage)
+// ══════════════════════════════════════
+function loadBanList(){
+  try{
+    const saved = localStorage.getItem('ht_admin_banlist_'+GID);
+    banList = saved ? JSON.parse(saved) : [];
+  }catch(e){banList=[];}
+  renderBanList();
+}
+
+function saveBanList(){
+  try{localStorage.setItem('ht_admin_banlist_'+GID,JSON.stringify(banList));}catch(e){}
+}
+
+function addBan(pid,name){
+  // Hapus duplikat
+  banList = banList.filter(b=>b.pid!==pid&&b.name!==name);
+  banList.unshift({pid,name,bannedAt:new Date().toLocaleString('id-ID')});
+  saveBanList();
+  renderBanList();
+  updateStats();
+}
+
+function removeBan(pid){
+  banList = banList.filter(b=>b.pid!==pid);
+  saveBanList();
+  renderBanList();
+  updateStats();
+  showToast('BAN DICABUT · '+pid);
+}
+
+// ══════════════════════════════════════
+// ADMIN COMMANDS
+// ══════════════════════════════════════
+function sendCmd(obj){
+  if(!pn){showToast('TIDAK TERHUBUNG','err');return;}
+  // Kirim ke CMD_CH (user subscribe channel ini)
+  pn.publish({channel:CMD_CH, message:obj}).catch(()=>{});
+  // Kirim juga ke LOBBY_CH sebagai backup
+  pn.publish({channel:LOBBY_CH, message:obj}).catch(()=>{});
+}
+
+function kickUser(pid, name, reason){
+  sendCmd({type:'kick', target:pid, targetName:name, reason:reason||'', from:'ADMIN'});
+  // Hapus dari local list segera
+  setTimeout(()=>{
+    if(users[pid])delete users[pid];
+    updateUI();
+  },3000);
+  showToast('⚡ KICK → '+name);
+}
+
+function banUser(pid, name, reason){
+  sendCmd({type:'ban', target:pid, targetName:name, reason:reason||'', from:'ADMIN'});
+  // Tambah ke ban list
+  addBan(pid, name);
+  setTimeout(()=>{
+    if(users[pid])delete users[pid];
+    updateUI();
+  },3000);
+  showToast('🚫 BAN → '+name);
+}
+
+function doBroadcast(type){
+  const msg = D('bcMsg').value.trim();
+  if(!msg){showToast('Pesan tidak boleh kosong','err');return;}
+  sendCmd({type:'announce',message:msg,from:'ADMIN'});
+  D('bcMsg').value='';
+  showToast('📣 BROADCAST DIKIRIM');
+}
+
+function doBroadcastKickAll(){
+  openDlg('⚡ PUTUS SEMUA',
+    'Semua pengguna yang sedang online akan diputus dari jaringan. Yakin?',
+    'PUTUS', 'warn', ()=>{
+      const reason = D('dlgReason').value.trim()||'Admin memutus semua koneksi';
+      Object.keys(users).forEach(pid=>{
+        sendCmd({type:'kick',target:pid,reason:reason,from:'ADMIN'});
+      });
+      setTimeout(()=>{users={};updateUI();},3000);
+      showToast('⚡ SEMUA DIPUTUS');
+    });
+}
+
+// ══════════════════════════════════════
+// UI — UPDATE
+// ══════════════════════════════════════
+function updateUI(){
+  updateStats();
+  renderChannels();
+  renderUserList();
+}
+
+function updateStats(){
+  const onlineArr = Object.values(users);
+  D('statOnline').textContent  = onlineArr.length;
+  D('statActive').textContent  = onlineArr.filter(u=>u.channel>0).length;
+  D('statBanned').textContent  = banList.length;
+  D('banCount').textContent    = banList.length;
+}
+
+function renderChannels(){
+  // Hitung user per channel
+  const counts = {};
+  for(let i=1;i<=9;i++)counts[i]=0;
+  Object.values(users).forEach(u=>{if(u.channel>=1&&u.channel<=9)counts[u.channel]++;});
+  const html = Array.from({length:9},(_,i)=>i+1).map(n=>`
+    <div class="ch-card ${counts[n]>0?'active':''}">
+      <div class="ch-num">${n}</div>
+      <div class="ch-count">${counts[n]>0?counts[n]+' user':'kosong'}</div>
+    </div>
+  `).join('');
+  D('chGrid').innerHTML=html;
+}
+
+function renderUserList(){
+  const all = Object.entries(users);
+  let filtered = all;
+  if(filterMode==='channel'){
+    filtered = all.filter(([,u])=>u.channel>0);
+  }
+
+  if(filtered.length===0){
+    D('userList').innerHTML='<div class="empty">Tidak ada pengguna online</div>';
+    return;
+  }
+
+  // Sort: channel aktif dulu
+  filtered.sort(([,a],[,b])=>(b.channel-a.channel)||(a.name.localeCompare(b.name)));
+
+  D('userList').innerHTML = filtered.map(([pid,u])=>{
+    const since = u.lastSeen ? Math.round((Date.now()-u.lastSeen)/1000)+'s lalu' : '-';
+    const chTxt = u.channel>0 ? 'CH '+u.channel+' · '+u.mode.toUpperCase() : 'Belum pilih channel';
+    const initial = u.name.charAt(0);
+    return `
+    <div class="user-card" id="uc_${pid}">
+      <div class="user-avatar">${initial}</div>
+      <div class="user-info">
+        <div class="user-name">${escHtml(u.name)}</div>
+        <div class="user-meta">${chTxt}</div>
+        <div class="user-id">ID: ${pid} · ${since}</div>
+      </div>
+      <div class="user-actions">
+        <button class="ua-btn ua-kick" onclick="promptKick('${pid}','${escHtml(u.name)}')">⚡ KICK</button>
+        <button class="ua-btn ua-ban"  onclick="promptBan('${pid}','${escHtml(u.name)}')">🚫 BAN</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderBanList(){
+  D('banCount').textContent = banList.length;
+  if(banList.length===0){
+    D('banList').innerHTML='<div class="empty">Belum ada yang diblokir</div>';
+    return;
+  }
+  D('banList').innerHTML = banList.map(b=>`
+    <div class="ban-card">
+      <div style="flex:1">
+        <div class="ban-name">🚫 ${escHtml(b.name)}</div>
+        <div class="ban-meta">ID: ${b.pid} · Diblokir: ${b.bannedAt}</div>
+      </div>
+      <button class="ua-btn ua-unban" onclick="removeBan('${b.pid}')">↩ UNBAN</button>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════
+// FILTER
+// ══════════════════════════════════════
+function filterUsers(mode){
+  filterMode=mode;
+  D('fAll').style.background  = mode==='all'?'#071e00':'#0a0a0a';
+  D('fAll').style.color       = mode==='all'?'#88cc44':'#444';
+  D('fCh').style.background   = mode==='channel'?'#071e00':'#0a0a0a';
+  D('fCh').style.color        = mode==='channel'?'#88cc44':'#444';
+  renderUserList();
+}
+
+// ══════════════════════════════════════
+// PROMPT (with confirm dialog)
+// ══════════════════════════════════════
+let _confirmCb = null;
+
+function openDlg(title,msg,btnTxt,btnClass,cb){
+  _confirmCb=cb;
+  D('dlgTitle').textContent=title;
+  D('dlgMsg').textContent=msg;
+  D('dlgReason').value='';
+  D('dlgOkBtn').textContent=btnTxt;
+  D('dlgOkBtn').className='dlg-btn dlg-ok'+(btnClass?' '+btnClass:'');
+  D('confirmDlg').classList.add('show');
+}
+
+function closeDlg(){
+  D('confirmDlg').classList.remove('show');
+  _confirmCb=null;
+}
+
+function confirmAction(){
+  closeDlg();
+  if(_confirmCb){_confirmCb();_confirmCb=null;}
+}
+
+function promptKick(pid,name){
+  openDlg('⚡ KICK PENGGUNA',
+    'Putus koneksi '+name+'?\nMereka bisa bergabung kembali.',
+    'KICK', '',
+    ()=>{
+      const reason=D('dlgReason').value.trim();
+      kickUser(pid,name,reason);
+    });
+}
+
+function promptBan(pid,name){
+  openDlg('🚫 BLOKIR PENGGUNA',
+    'Blokir '+name+' secara permanen?\nMereka tidak bisa menggunakan aplikasi lagi di perangkat yang sama.',
+    'BLOKIR', '',
+    ()=>{
+      const reason=D('dlgReason').value.trim();
+      banUser(pid,name,reason);
+    });
+  D('dlgOkBtn').style.background='#200000';
+  D('dlgOkBtn').style.color='#ff4444';
+}
+
+// ══════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════
+let _toastTimer=null;
+function showToast(msg,type=''){
+  const el=D('toast');
+  el.textContent=msg;
+  el.className='show'+(type?' '+type:'');
+  if(_toastTimer)clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>{el.className='';},3000);
+}
+
+// ══════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════
+function escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Init channel grid
+(function(){
+  renderChannels();
+  renderBanList();
+  updateStats();
+})();
+</script>
+</body>
+</html>
